@@ -1,10 +1,11 @@
 import cv2
 
-class Dataset():
-    def __init__(self, path, bounding_box) -> None:
+class Imagem():
+    def __init__(self, path, bounding_box, label) -> None:
         self.path  = path
         self.bounding_box = bounding_box
         self.cv2_image = cv2.imread(path)
+        self.label = label
         pass
     
     def show_img(self):
