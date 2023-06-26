@@ -58,23 +58,40 @@ class ImgDataset(Dataset):
 
         bbox = img_obj.bounding_box
 
-        x0_final = (bbox[0]/image_width) * self.width
-        x1_final = (bbox[1]/image_width) * self.width
-        y0_final = (bbox[2]/image_height) * self.height
-        y1_final = (bbox[3]/image_height) * self.height
+        x_min = bbox[0]
+        y_min = bbox[1]
+        x_max = bbox[2]
+        y_max = bbox[3]
+
+        # Ajustar tamanho da bbox
+        bbox_width = x_max - x_min
+        bbox_height = y_max - y_min
+        bbox_width_scaled = bbox_width * self.width / image_width
+        bbox_height_scaled = bbox_height * self.height / image_height
+
+        # Ajustar pontos
+        x_min_scaled = x_min * self.width / image_width
+        y_min_scaled = y_min * self.height / image_height
+        x_max_scaled = x_min_scaled + bbox_width_scaled
+        y_max_scaled = y_min_scaled + bbox_height_scaled
+
+        # Criar nova bounding box ajustada
         
-        boxes = torch.as_tensor([[x0_final, y0_final, x1_final, y1_final]], dtype=torch.float32)
+        boxes = torch.as_tensor([[x_min_scaled, y_min_scaled, x_max_scaled, y_max_scaled]], dtype=torch.float32)
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+        
         # no crowd instances
         iscrowd = torch.zeros((boxes.shape[0],), dtype=torch.int64)
         labels = torch.as_tensor([img_obj.label], dtype=torch.int64)
+        
         # box = [x0_final, y0_final, x1_final, y1_final]
         image_id = torch.tensor([idx])
         target = {"boxes": boxes, "labels": labels, "image_id": image_id, "area": area, "iscrowd": iscrowd}
 
         sample = self.transforms(image=image_resized, bboxes=target['boxes'], labels=labels)
+        
         image_resized = sample['image']
-        target['boxes'] = torch.Tensor(sample['boxes'])
+        target['boxes'] = torch.Tensor(sample['bboxes'])
 
         return image_resized, target
 
