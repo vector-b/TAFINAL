@@ -63,13 +63,13 @@ class ImgDataset(Dataset):
         x_max = bbox[2]
         y_max = bbox[3]
 
-        # Ajustar tamanho da bbox
+        # Fix box size
         bbox_width = x_max - x_min
         bbox_height = y_max - y_min
         bbox_width_scaled = bbox_width * self.width / image_width
         bbox_height_scaled = bbox_height * self.height / image_height
 
-        # Ajustar pontos
+        # Fix scaled points (image-related)
         x_min_scaled = x_min * self.width / image_width
         y_min_scaled = y_min * self.height / image_height
         x_max_scaled = x_min_scaled + bbox_width_scaled
