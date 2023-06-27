@@ -7,6 +7,8 @@ from torchvision.io import read_image
 from torch.utils.data import Dataset
 import numpy as np
 
+from definitions import RESIZE_TO
+
 
 class Imagem(object):
     def __init__(self, path, bounding_box, label) -> None:
@@ -40,8 +42,8 @@ def get_training_transform():
 class ImgDataset(Dataset):
     def __init__(self, img_list: List[Imagem]):
         self.img_list: List[Imagem] = img_list
-        self.width = 256
-        self.height = 256
+        self.width = RESIZE_TO
+        self.height = RESIZE_TO
         self.transforms = get_training_transform()
         pass
         
