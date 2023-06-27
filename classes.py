@@ -40,8 +40,8 @@ def get_training_transform():
 class ImgDataset(Dataset):
     def __init__(self, img_list: List[Imagem]):
         self.img_list: List[Imagem] = img_list
-        self.width = 512
-        self.height = 512
+        self.width = 256
+        self.height = 256
         self.transforms = get_training_transform()
         pass
         
@@ -66,12 +66,12 @@ class ImgDataset(Dataset):
         # Fix box size
         bbox_width = x_max - x_min
         bbox_height = y_max - y_min
-        bbox_width_scaled = bbox_width * self.width / image_width
-        bbox_height_scaled = bbox_height * self.height / image_height
+        bbox_width_scaled = bbox_width / image_width
+        bbox_height_scaled = bbox_height / image_height
 
         # Fix scaled points (image-related)
-        x_min_scaled = x_min * self.width / image_width
-        y_min_scaled = y_min * self.height / image_height
+        x_min_scaled = x_min / image_width
+        y_min_scaled = y_min / image_height
         x_max_scaled = x_min_scaled + bbox_width_scaled
         y_max_scaled = y_min_scaled + bbox_height_scaled
 
@@ -94,6 +94,7 @@ class ImgDataset(Dataset):
         target['boxes'] = torch.Tensor(sample['bboxes'])
 
         return image_resized, target
+
 
     def __len__(self):
         return len(self.img_list)
