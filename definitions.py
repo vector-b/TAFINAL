@@ -9,3 +9,4 @@ BASE_DATASET_IMAGES_PATH = "./dataset"
 STANFORD_SET_PATH = os.path.join(BASE_DATASET_IMAGES_PATH, "stanford_by_class")
 STANFORD_TRAIN_PATH = os.path.join(STANFORD_SET_PATH, "car_data/car_data/train/")
 STANFORD_VALIDATION_PATH = os.path.join(STANFORD_SET_PATH, "car_data/car_data/test/")
+MODEL_SAVE_PATH = "./model.pt"
