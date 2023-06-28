@@ -60,8 +60,6 @@ class ImgDataset(Dataset):
             y_max = y_min + bbox[3] / (image_height / self.height)
 
             boxes.append([x_min, y_min, x_max, y_max])
-        if len(boxes) == 0:
-            print(img_obj.path)
 
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         # area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])

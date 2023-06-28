@@ -27,29 +27,28 @@ def get_labels(root_path, csv_name: str):
             return labels
 
 
-def get_dataset(folder, labels):
+def get_dataset(folder, labels, has_annotation=True):
     images = []
-
+    print("Constructing dataset.")
     annotation_pos = 0
     for info_img in labels['images']:
         bboxes = []
         categories = []
         areas = []
+        if has_annotation:
+            while annotation_pos < len(labels['annotations']):
+                annotation = labels['annotations'][annotation_pos]
+                if annotation['image_id'] != info_img['id']:
+                    break
 
-        while annotation_pos < len(labels['annotations']):
-            annotation = labels['annotations'][annotation_pos]
-            if annotation['image_id'] != info_img['id']:
-                break
+                bboxes.append(annotation['bbox'])
+                categories.append(annotation['category_id'])
+                areas.append(annotation['area'])
+                annotation_pos += 1
 
-            bboxes.append(annotation['bbox'])
-            categories.append(annotation['category_id'])
-            areas.append(annotation['area'])
-            annotation_pos += 1
-
-        if len(bboxes) > 0:
+        if len(bboxes) > 0 or not has_annotation:
             path = os.path.join(folder, info_img['file_name'].replace('.png', '.jpg'))
             img = Imagem(path=path, bounding_box=bboxes, label=categories, areas=areas)
-
             images.append(img)
 
     return ImgDataset(images)

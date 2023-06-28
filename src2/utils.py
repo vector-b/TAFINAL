@@ -5,9 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import torch
+from tqdm.auto import tqdm
 
 from definitions import OUT_DIR, WIDTH, HEIGHT
-from torch.cuda.memory import change_current_allocator
 
 
 def save_loss_plot(train_loss, val_loss):
@@ -30,29 +30,29 @@ def create_predictions(model, data_loader):
     model.eval()
 
     predictions = []
-    previewed_images = []
-    print("pred")
+    prog_bar = tqdm(data_loader, total=len(data_loader))
     with torch.no_grad():
-        for images, targets in data_loader:
-            previewed_images.extend(images)
+        for i, data in enumerate(prog_bar):
+            images, targets = data
+
             images = list(image.to(DEVICE) for image in images)
             result_prediction = model(images)
 
-            json_obj = {"boxes": [], "labels": [], "scores": [], "image_id": targets[0]["image_id"].item()}
-            for box, label, score in zip(result_prediction[0]['boxes'],
-                                         result_prediction[0]['labels'],
-                                         result_prediction[0]['scores']):
-                json_obj["boxes"].append([box[0].item(), box[1].item(), box[2].item(), box[3].item()])
-                json_obj["labels"].append(label.item())
-                json_obj["scores"].append(score.item())
+            for i in range(len(result_prediction)):
+                json_obj = {"boxes": [], "labels": [], "scores": [], "image_id": targets[i]["image_id"].item()}
+                for box, label, score in zip(result_prediction[i]['boxes'],
+                                             result_prediction[i]['labels'],
+                                             result_prediction[i]['scores']):
+                    json_obj["boxes"].append([box[0].item(), box[1].item(), box[2].item(), box[3].item()])
+                    json_obj["labels"].append(label.item())
+                    json_obj["scores"].append(score.item())
 
-            print(result_prediction)
-            predictions.append(json_obj)
+                predictions.append(json_obj)
 
     time_id = time.time()
     with open(os.path.join(OUT_DIR, f"predictions_{time_id}.json"), "w") as f:
         json.dump(predictions, f, indent=4)
-    return predictions, previewed_images
+    return predictions
 
 
 def video_writer(imgs_dir, imgs_info, predictions):
@@ -68,30 +68,40 @@ def video_writer(imgs_dir, imgs_info, predictions):
     '''
     colors = {1: (0, 255, 0), 2: (0, 0, 255), 3: (255, 255, 51), 4: (0, 255, 255), 5: (255, 102, 255),
               6: (51, 153, 255)}
-    shape = WIDTH, HEIGHT
-    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-    fps = 2
-    out = cv2.VideoWriter("./results/output.avi", fourcc, fps, shape)
+    shape = 1280, 720
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fps = 10
+    current_video = None
+    out = None
+
     for current_prediction in predictions:
         info = imgs_info[current_prediction["image_id"]]
-        print(f"{imgs_dir}/{info['file_name']}")
+        if current_video != info['source']['video']:
+            if out is not None:
+                out.release()
+
+            current_video = info['source']['video']
+            out = cv2.VideoWriter(f"./results/{current_video}", fourcc, fps, shape)
+
         image = cv2.imread(f"{imgs_dir}/{info['file_name'].replace('.png', '.jpg')}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_resized = cv2.resize(image, (WIDTH, HEIGHT))
 
         for j in range(len(current_prediction["boxes"])):
-            if current_prediction["scores"][j] < 0.5:
-                print("Too low percentage, skipping.")
-                continue
+            score = current_prediction["scores"][j]
             box = current_prediction["boxes"][j]
             category = current_prediction["labels"][j]
+
+            if score < 0.65 or category == 7:
+                continue
 
             start_point = (int(box[0]), int(box[1]))
             end_point = (int(box[2]), int(box[3]))
             cv2.rectangle(image_resized, start_point, end_point, color=colors[category], thickness=2)
-        cv2.imwrite("./results/img.png", image_resized)
         out.write(image_resized)
+
     out.release()
+    print(f"Video '{current_video}' saved.")
 
 
 
