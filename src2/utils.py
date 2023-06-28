@@ -56,48 +56,53 @@ def create_predictions(model, data_loader):
 
 
 def video_writer(imgs_dir, imgs_info, predictions):
-    '''
-    one color for each category (excluding category nr 7)
-        1: swimmer
-        2: floater
-        3: boat
-        4: swimmer on boat
-        5: floater on boat
-        6: life jacket
-        7: ignored
-    '''
+    class_names = {1: "Banhista", 2: "Salva-vidas", 3: "Barco", 4: "Banhista no barco", 5: "Salva-vidas no barco",
+                   6: "Colete"}
     colors = {1: (0, 255, 0), 2: (0, 0, 255), 3: (255, 255, 51), 4: (0, 255, 255), 5: (255, 102, 255),
               6: (51, 153, 255)}
     shape = 1280, 720
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    fps = 10
+    fps = 24
     current_video = None
     out = None
 
+    print("Video creation begin!")
     for current_prediction in predictions:
         info = imgs_info[current_prediction["image_id"]]
         if current_video != info['source']['video']:
             if out is not None:
                 out.release()
+                print(f"Video '{current_video}' saved.")
 
             current_video = info['source']['video']
             out = cv2.VideoWriter(f"./results/{current_video}", fourcc, fps, shape)
 
         image = cv2.imread(f"{imgs_dir}/{info['file_name'].replace('.png', '.jpg')}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_resized = cv2.resize(image, (WIDTH, HEIGHT))
+        image_resized = cv2.resize(image, shape)
 
+        counter = 0
         for j in range(len(current_prediction["boxes"])):
             score = current_prediction["scores"][j]
             box = current_prediction["boxes"][j]
             category = current_prediction["labels"][j]
 
-            if score < 0.65 or category == 7:
+            if score < 0.75 or category == 7:
                 continue
+            else:
+                counter += 1
 
             start_point = (int(box[0]), int(box[1]))
             end_point = (int(box[2]), int(box[3]))
             cv2.rectangle(image_resized, start_point, end_point, color=colors[category], thickness=2)
+
+            cv2.putText(
+                image_resized, f"{class_names[category]}: {int(score*100)}%", (int(box[0]), int(box[1]) - 10),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.6, color=colors[category], thickness=2)
+
+        cv2.putText(image_resized, str(counter), (20, 50), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2,
+                    color=(0, 0, 0), thickness=4)
+
         out.write(image_resized)
 
     out.release()

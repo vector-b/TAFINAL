@@ -6,6 +6,8 @@ from torchvision.io import read_image
 from torch.utils.data import Dataset
 import numpy as np
 from PIL import Image
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
 
 from definitions import WIDTH, HEIGHT
 
@@ -33,24 +35,36 @@ def get_training_transform():
 
 
 class ImgDataset(Dataset):
-    def __init__(self, img_list: List[Imagem]):
+    def __init__(self, img_list: List[Imagem], is_validation=True):
         self.img_list: List[Imagem] = img_list
         self.width = WIDTH
         self.height = HEIGHT
-        self.transforms = Compose([
-            Resize((self.height, self.width)),
-            ToTensor(),
-        ])
+        self.is_validation = is_validation
+        # self.resize = Compose([
+        #     Resize((self.height, self.width))
+        # ])
+        self.training_transforms = A.Compose([A.Flip(p=0.5),
+                                   A.RandomRotate90(p=0.5),
+                                   ToTensorV2()],
+                                   bbox_params={
+                                        'format': 'pascal_voc',
+                                        'label_fields': ['labels'],
+                                    })
+        self.to_tensor = A.Compose([ToTensorV2()])
         pass
         
     def __getitem__(self, idx):
         img_obj = self.img_list[idx]
-        image = Image.open(img_obj.path)
 
-        image_resized = self.transforms(image)
+        # read the image
+        image = cv2.imread(img_obj.path)
+        # convert BGR to RGB color format
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+        image_resized = cv2.resize(image, (self.width, self.height))
+        image_resized /= 255.0
 
-        image_width = image.width
-        image_height = image.height
+        image_width = image.shape[1]
+        image_height = image.shape[0]
 
         boxes = []
         for bbox in img_obj.bounding_box:
@@ -74,6 +88,13 @@ class ImgDataset(Dataset):
         target = {"boxes": boxes, "labels": labels, "image_id": image_id, "area": area, "iscrowd": iscrowd,
                   'org_w': torch.as_tensor(image_width, dtype=torch.int64),
                   'org_h': torch.as_tensor(image_height, dtype=torch.int64)}
+
+        if not self.is_validation:
+            sample = self.training_transforms(image=image_resized, bboxes=target["boxes"], labels=target['labels'])
+            image_resized = sample['image']
+            target['boxes'] = torch.Tensor(sample['bboxes'])
+        else:
+            image_resized = self.to_tensor(image=image_resized)['image']
 
         return image_resized, target
 

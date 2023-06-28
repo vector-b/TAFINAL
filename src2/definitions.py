@@ -1,6 +1,6 @@
 import os
 
-BATCH_SIZE = 6 # increase / decrease according to GPU memeory
+BATCH_SIZE = 4 # increase / decrease according to GPU memeory
 WIDTH = 640
 HEIGHT = 360
 NUM_CLASSES = 8

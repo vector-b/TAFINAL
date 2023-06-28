@@ -27,7 +27,7 @@ def get_labels(root_path, csv_name: str):
             return labels
 
 
-def get_dataset(folder, labels, has_annotation=True):
+def get_dataset(folder, labels, has_annotation=True, is_validation=True):
     images = []
     print("Constructing dataset.")
     annotation_pos = 0
@@ -51,7 +51,7 @@ def get_dataset(folder, labels, has_annotation=True):
             img = Imagem(path=path, bounding_box=bboxes, label=categories, areas=areas)
             images.append(img)
 
-    return ImgDataset(images)
+    return ImgDataset(images, is_validation)
 
 
 def collate_fn(batch):
